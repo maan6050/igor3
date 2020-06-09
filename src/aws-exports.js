@@ -9,14 +9,13 @@ const awsconfig = {
     "oauth": {
         "domain": "igor.auth.us-east-1.amazoncognito.com",
         "scope": [
-            "phone",
             "email",
             "openid",
             "profile",
             "aws.cognito.signin.user.admin"
         ],
-        "redirectSignIn": "https://master.d21ecv5wuv7loy.amplifyapp.com/",
-        "redirectSignOut": "https://master.d21ecv5wuv7loy.amplifyapp.com/",
+        "redirectSignIn": "http://localhost:3000/",
+        "redirectSignOut": "http://localhost:3000/",
         "responseType": "code"
     },
     "federationTarget": "COGNITO_USER_POOLS",

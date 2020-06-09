@@ -1,13 +1,15 @@
-import React, { Component, Fragment } from "react";
-import { Auth, Hub } from "aws-amplify";
+import React, { Component, Fragment, useEffect } from "react";
+import Amplify, { Auth, Hub } from "aws-amplify";
 import { Link, withRouter } from "react-router-dom";
 import { Nav, Navbar, NavItem } from "react-bootstrap";
-import { LinkContainer } from "react-router-bootstrap";
+// import { LinkContainer } from "react-router-bootstrap";
 import Routes from "./Routes";
 // import config from "./config";
 import { validateToken } from './Utils/helper';
 import { AUTH_USER_TOKEN_KEY, AUTH_USER_KEY } from './Utils/constants';
 import "./App.css";
+import awsconfig from './aws-exports';
+Amplify.configure(awsconfig);
 
 class App extends Component {
   constructor(props) {
@@ -18,74 +20,47 @@ class App extends Component {
       isAuthenticating: true,
       user: null, 
       customState: null,
-      isRegistered: false
+      isRegistered: false,
+      loginLoading: false
     };
   }
 
   async componentDidMount() {
-
-    // Hub.listen("auth", ({ payload: { event, data } }) => {
-    //   console.log('Hub Switch');
-    //   console.log(event);
-    //   switch (event) {
-    //     // case "signIn":
-    //     //   console.log(data);
-    //     //   console.log(data['CognitoUser:signInUserSession']);
-    //     //   console.log(data['CognitoUser:username']);
-    //     //   console.log(data['username']);
-    //     //   console.log(data.username);
-    //     //   // localStorage.setItem(AUTH_USER_TOKEN_KEY, data.signInUserSession.accessToken.jwtToken);
-    //     //   let userData = {};
-    //     //   if (data.attributes) {
-    //     //     userData = data.attributes;
-    //     //   } else {
-
-    //     //   }
-    //     //   console.log(userData);
-    //     //   this.setState({ user: userData });
-    //     //   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-    //     //   this.userHasAuthenticated(true);
-    //     //   break;
-    //     case "signOut":
-    //       this.userHasAuthenticated(false);
-    //       localStorage.removeItem(AUTH_USER_TOKEN_KEY);
-    //       localStorage.removeItem(AUTH_USER_KEY);
-    //       this.setState({ user: null });
-    //       this.props.history.push("/login");
-    //       break;
-    //     case "customOAuthState":
-    //       this.setState({ customState: data });
-    //       break;
-    //     default:
-    //       console.log('default');
-    //       this.userHasAuthenticated(false);
-
-    //   }
-    // });
-
-    // if (validateToken()) {
-    //   console.log('Token Valid');
-    //   this.userHasAuthenticated(true);
-    //   if (!this.state.user) {
-    //     this.setState({ user: JSON.parse(localStorage.getItem(AUTH_USER_KEY)) });
-    //   }
-    // } else {
-      try {
-        let data = await Auth.currentAuthenticatedUser();
-        console.log(data);
-        let userData = data.attributes ? data.attributes : {};
-        this.setUserData(userData);
-        this.userHasAuthenticated(true);
-      } catch (e) {
-        if (e !== "not authenticated") {
-          alert(e);
-        }
+   
+    if (validateToken()) {
+      console.log('Token Valid');
+      this.userHasAuthenticated(true);
+      if (!this.state.user) {
+        this.setState({ user: JSON.parse(localStorage.getItem(AUTH_USER_KEY)) });
       }
-
-    // } /*   Validate token else end */    
+    } else {
+      console.log('testing');
+      Auth.currentAuthenticatedUser({
+        bypassCache: false
+      })
+      .then(user  =>  {
+        console.log(user);
+        const accessToken = user.signInUserSession.accessToken.jwtToken;
+        console.log(accessToken);
+        const userData = {
+          name: user.signInUserSession.idToken.payload.name,
+          sub: user.signInUserSession.idToken.payload.sub,
+          email: user.signInUserSession.idToken.payload.email,
+          email_verified: user.signInUserSession.idToken.payload.email_verified,
+          phone_number: user.signInUserSession.idToken.payload.phone_number,
+          phone_number_verified: user.signInUserSession.idToken.payload.phone_number_verified,
+        }
+        console.log(userData);
+        this.setUserData(userData);
+        localStorage.setItem(AUTH_USER_TOKEN_KEY, accessToken);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        this.userHasAuthenticated(true);
+      })
+      .catch(err =>  console.log(err));
+    }
 
     this.setState({ isAuthenticating: false });
-  }
+  };
 
   userHasAuthenticated = authenticated => {
     this.setState({ isAuthenticated: authenticated });
@@ -105,6 +80,8 @@ class App extends Component {
     await Auth.signOut();
     this.userHasAuthenticated(false);
     this.setState({ user: null });
+    localStorage.removeItem(AUTH_USER_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
     this.props.history.push('/login');
   };
 
@@ -128,26 +105,32 @@ class App extends Component {
     return (
       !this.state.isAuthenticating && (
         <div className="App container">
-          <Navbar fluid collapseOnSelect>
-            <Navbar.Header>
-              <Navbar.Brand>
-                <Link to="/">Amplify Cognito App</Link>
-              </Navbar.Brand>
-              <Navbar.Toggle />
-            </Navbar.Header>
-            <Navbar.Collapse>
-              <Nav pullRight>
-                {this.state.isAuthenticated ? (
-                  <NavItem onClick={this.handleLogout}>Logout</NavItem>
-                ) : (
-                  <Fragment>
-                    
-                  </Fragment>
-                )}
-              </Nav>
-            </Navbar.Collapse>
-          </Navbar>
-          <Routes childProps={childProps} />
+          {this.state.loginLoading ? (
+            <div>Please wait, Loggin you in...</div>
+          ) : (
+            <div>
+              <Navbar fluid collapseOnSelect>
+                <Navbar.Header>
+                  <Navbar.Brand>
+                    <Link to="/">Amplify Cognito App</Link>
+                  </Navbar.Brand>
+                  <Navbar.Toggle />
+                </Navbar.Header>
+                <Navbar.Collapse>
+                  <Nav pullRight>
+                    {this.state.isAuthenticated ? (
+                      <NavItem onClick={this.handleLogout}>Logout</NavItem>
+                    ) : (
+                      <Fragment>
+                        
+                      </Fragment>
+                    )}
+                  </Nav>
+                </Navbar.Collapse>
+              </Navbar>
+              <Routes childProps={childProps} />
+            </div>
+          )}
         </div>
       )
     );

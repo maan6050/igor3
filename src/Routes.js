@@ -13,6 +13,7 @@ import UnauthenticatedRoute from "./components/UnauthenticatedRoute";
 export default ({ childProps }) =>
   <Switch>
     <AppliedRoute path="/" exact component={Home} props={childProps} />
+    <UnauthenticatedRoute path="/index.html" exact component={Login} props={childProps} />
     <UnauthenticatedRoute path="/login" exact component={Login} props={childProps} />
     <UnauthenticatedRoute path="/signup" exact component={Signup} props={childProps} />
     <AuthenticatedRoute path="/notes/new" exact component={NewNote} props={childProps} />

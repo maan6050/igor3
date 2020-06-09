@@ -4,7 +4,7 @@ import { FormGroup, FormControl, ControlLabel } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import LoaderButton from "../components/LoaderButton";
 import "./Login.css";
-import { AUTH_USER_TOKEN_KEY } from '../Utils/constants';
+import { AUTH_USER_TOKEN_KEY, AUTH_USER_KEY } from '../Utils/constants';
 import awsconfig from '../aws-exports';
 Amplify.configure(awsconfig);
 
@@ -47,10 +47,13 @@ export default class Login extends Component {
     this.setState({ successMessage: null });
 
     Auth.signIn(this.state.email, this.state.password)
-      .then(data => {
-        let userData = data.attributes ? data.attributes : {};
+      .then(user => {
+        const accessToken = user.signInUserSession.accessToken.jwtToken;
+        const userData = user.attributes ? user.attributes : {};
         this.setState({ successMessage: 'Logged in successfully!!' });
         this.props.setUserData(userData);
+        localStorage.setItem(AUTH_USER_TOKEN_KEY, accessToken);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
         this.props.userHasAuthenticated(true);
       })
       .catch(err => {
@@ -59,7 +62,7 @@ export default class Login extends Component {
       });
   };
 
-  socialLogin = (provider: string)  =>  {
+  socialLogin = (provider)  =>  {
     Auth.federatedSignIn({provider: provider});
   }
 
